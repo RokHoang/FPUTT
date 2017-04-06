@@ -41,8 +41,39 @@ class FPTree:
 	def sort(self):
 		self.htable.sort_rank()
 		self.rank = self.htable.rank
-	def getAllPath(self):
-		pass
+	def getAllNode(self,TIDS):
+		for TID in TIDS:
+			node = self.root
+			flag = True
+			while (node.next and flag):
+				#print node.name
+				flag = False
+				for name,child in node.next.iteritems():
+					#print name, child.data
+					for d in child.data:
+						if TID == d[0]:
+							yield [d,child.name]
+							node = child
+							flag = True
+							break
+
+
+			
+		pass	
+	def getUtil(self,item,TIDS):
+		head = self.htable.table[item]["head"]
+		tail =self.htable.table[item]["tail"]
+		node = head
+		sumUtil = 0
+		while (True):
+			sumUtil += sum([transaction[1] for transaction in node.data if transaction[0] in TIDS])
+			node = node.link
+			if (node == None):
+				return sumUtil*UTILITY[item]
+	def getSumUtil(self,itemset,TIDS):
+
+		return sum([self.getUtil(item,TIDS) for item in itemset])
+
 	def add(self,transaction,STT):
 		visitor = self.root
 		itemset = self.htable.adjust(transaction)
@@ -102,15 +133,120 @@ class FPUTT:
 			self.tree.count(SI)
 			count+=1
 		self.tree.sort()
-		
+		count = 1
 		for transaction in db:
 			SI = getSI(transaction)
 			self.tree.add(SI,"T"+str(count))
+			count+=1
+	def RemoveItem(self,item,delta,itemset):
+		TIDS = self.SIT["".join(itemset)]
+		def removeItem(item,delta,itemset,TIDS):
+			head = self.tree.htable.table[item]["head"]
+			tail =self.tree.htable.table[item]["tail"]
+			node = head
+			maxnode = None
+			maxvalue = 0
+			while(True):
+				for transaction in node.data:
+					if (transaction[1]>maxvalue):
+						maxvalue=transaction[1]
+						maxnode = transaction
+				if (node == tail):
+					break
+				node = node.link
+			print maxnode
+			total_util = self.tree.getSumUtil(itemset,TIDS)
+			reduction = (total_util-delta+1)/UTILITY[item]
+			if (reduction<maxnode[1]):
+				maxnode[1] = maxnode[1] - reduction
+			else:
+				maxnode[1] = 0
+			print maxnode
+			print total_util
+			print self.tree.getSumUtil(itemset,TIDS)			
+		removeItem(item,delta,itemset,TIDS)
+		pass
+	def RemoveRemain(self,itemset,delta):
+		rankItem = []
+		print sorted(UTILITY.most_common(), key=lambda (x,y): (y,x))
+		for item in UTILITY.most_common():
+			if item[0] in itemset:
+				rankItem+=item[0]
+		print rankItem
+		TIDS = self.SIT["".join(itemset)]
+		for item in rankItem:
+			print "[+]"+item
+			while (self.tree.getSumUtil(itemset,TIDS) > delta):
+				self.RemoveItem(itemset,delta,itemset)
+				if (self.tree.getSumUtil(item,TIDS) == 0):
+					break
+
+		return
+		pass
+
 	def PerturbedTree(self,SIS=None,delta=None):
+		rankIS = Counter({" ".join(itemset):self.tree.getSumUtil(itemset,self.SIT["".join(itemset)]) for itemset in SIS})
+		print rankIS.most_common()
+		for key in rankIS.most_common():
+			print key[0]
+			itemset = key[0].split()
+			TIDS = self.SIT["".join(itemset)]
+			targetUtil = self.tree.getSumUtil(itemset,TIDS)-delta
+			maxUtil = 0
+			targetNode = None
+			while(targetUtil>0):
+				print TIDS
+				maxUtil = 0
+				targetNode = None
+				for node in self.tree.getAllNode(TIDS):
+					#print node
+					currentUtil = UTILITY[node[1]] * node[0][1]
+					if (maxUtil<currentUtil):
+						maxUtil = currentUtil
+						targetNode = node
+				
+				print targetNode
+				if(maxUtil<=targetUtil):
+					targetNode[0][1] = 0
+					targetUtil -= maxUtil
+				else:
+					targetNode[0][1] = targetNode[0][1] - (targetUtil/UTILITY[targetNode[1]])
+					targetUtil = 0
+				print targetNode
+				print "===="
+				#for P in self.tree.getAllPath(TIDS):
+				#	print P
+					#if ()
+				
+			#while (self.tree.getSumUtil(itemset,TIDS) > delta):
+				#self.RemoveRemain(itemset,delta)
+				
+				pass
+		return
 		pass
 	def RecoverDB(self,DB=None):
+		count = 1
+		for transaction in DB:
+			TID = "T"+str(count)
+			node = self.tree.root
+			flag = True
+			path = []
+			while (node.next and flag):
+				#print node.name
+				flag = False
+				for name,child in node.next.iteritems():
+					#print name, child.data
+					for d in child.data:
+						if TID == d[0]:
+							node = child
+							path.append([name,d[1]])
+							flag = True
+							break
+			
+			print TID,path+self.IIT[TID]
+			count+=1
 		pass
-	def run(self,db,SIS=None,DB=None,delta=None):
+	def run(self,SIS=None,DB=None,delta=None):
 		self.CreateTree(DB,SIS)
 		self.PerturbedTree(SIS,delta)
 		self.RecoverDB(DB)
@@ -132,6 +268,8 @@ def readDB(database):
 
 db = readDB("database")
 SIS = [["B","D"],["C","D"],["A","C","D"]]
-UTILITY = {"A":5,"B":3,"C":1,"D":6,"E":2}
+UTILITY = Counter({"A":5,"B":3,"C":1,"D":6,"E":2})
 FPUTT = FPUTT()
-FPUTT.CreateTree(db,SIS)
+FPUTT.run(SIS,db,102)
+
+#tìm max của các utility 
