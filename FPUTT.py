@@ -105,7 +105,7 @@ class FPUTT:
 						break
 				if flag:
 					setSI |= set(SI)
-					resultSI["".join(SI)] = [[item,kv[item]] for item in SI]
+					resultSI[" ".join(SI)] = [[item,kv[item]] for item in SI]
 			resultII = [x for x in itemset if x[0] not in setSI]
 			return resultSI,resultII
 		def getSI(itemset):
@@ -127,8 +127,8 @@ class FPUTT:
 		for transaction in db:
 			SI,II = getSIandII(transaction)
 			for itemset in SIS:
-				if "".join(itemset) in SI:
-					self.SIT["".join(itemset)] += ["T"+str(count)]
+				if " ".join(itemset) in SI:
+					self.SIT[" ".join(itemset)] += ["T"+str(count)]
 			self.IIT["T"+str(count)] = II
 			self.tree.count(SI)
 			count+=1
@@ -139,7 +139,7 @@ class FPUTT:
 			self.tree.add(SI,"T"+str(count))
 			count+=1
 	def RemoveItem(self,item,delta,itemset):
-		TIDS = self.SIT["".join(itemset)]
+		TIDS = self.SIT[" ".join(itemset)]
 		def removeItem(item,delta,itemset,TIDS):
 			head = self.tree.htable.table[item]["head"]
 			tail =self.tree.htable.table[item]["tail"]
@@ -173,7 +173,7 @@ class FPUTT:
 			if item[0] in itemset:
 				rankItem+=item[0]
 		print rankItem
-		TIDS = self.SIT["".join(itemset)]
+		TIDS = self.SIT[" ".join(itemset)]
 		for item in rankItem:
 			print "[+]"+item
 			while (self.tree.getSumUtil(itemset,TIDS) > delta):
@@ -185,12 +185,12 @@ class FPUTT:
 		pass
 
 	def PerturbedTree(self,SIS=None,delta=None):
-		rankIS = Counter({" ".join(itemset):self.tree.getSumUtil(itemset,self.SIT["".join(itemset)]) for itemset in SIS})
+		rankIS = Counter({" ".join(itemset):self.tree.getSumUtil(itemset,self.SIT[" ".join(itemset)]) for itemset in SIS})
 		print rankIS.most_common()
 		for key in rankIS.most_common():
 			print key[0]
 			itemset = key[0].split()
-			TIDS = self.SIT["".join(itemset)]
+			TIDS = self.SIT[" ".join(itemset)]
 			targetUtil = self.tree.getSumUtil(itemset,TIDS)-delta
 			maxUtil = 0
 			targetNode = None
@@ -265,11 +265,17 @@ def readDB(database):
 			content = zip(content[0::2], content[1::2])
 			db.append([convert(x) for x in content])
 	return db
-
+def readDBretail(database):
+	with open(database,"r") as f:
+		for line in f.readlines():
+			record = [[x,1] for x in line.split()]
+			yield record
 db = readDB("database")
+for t in db:
+	print t
+
 SIS = [["B","D"],["C","D"],["A","C","D"]]
 UTILITY = Counter({"A":5,"B":3,"C":1,"D":6,"E":2})
 FPUTT = FPUTT()
 FPUTT.run(SIS,db,102)
 
-#tìm max của các utility 
