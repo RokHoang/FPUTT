@@ -2,6 +2,7 @@
 from collections import Counter
 from itertools import izip
 from collections import defaultdict
+import math
 class Node:
 	def __init__(self, name=None,data=None):
 		self.data = data #dữ liệu về các transaction và count
@@ -36,7 +37,7 @@ class FPTree:
 		self.htable = HeaderTable()
 		self.rank = None
 	def count(self,itemsets):
-		for x in set([item for itemset in itemsets.keys() for item in itemset]):
+		for x in set([item for itemset in itemsets.keys() for item in itemset.split(" ")]):
 			self.htable.add(x)
 	def sort(self):
 		self.htable.sort_rank()
@@ -201,25 +202,18 @@ class FPUTT:
 				for node in self.tree.getAllNode(TIDS):
 					#print node
 					currentUtil = UTILITY[node[1]] * node[0][1]
-					if (maxUtil<currentUtil):
+					if (maxUtil<=currentUtil):
 						maxUtil = currentUtil
 						targetNode = node
-				
-				print targetNode
+				print "Before",targetNode
 				if(maxUtil<=targetUtil):
 					targetNode[0][1] = 0
 					targetUtil -= maxUtil
 				else:
-					targetNode[0][1] = targetNode[0][1] - (targetUtil/UTILITY[targetNode[1]])
+					targetNode[0][1] = targetNode[0][1] - int(math.ceil((targetUtil*1.0)/UTILITY[targetNode[1]]))
 					targetUtil = 0
-				print targetNode
+				print "After ",targetNode
 				print "===="
-				#for P in self.tree.getAllPath(TIDS):
-				#	print P
-					#if ()
-				
-			#while (self.tree.getSumUtil(itemset,TIDS) > delta):
-				#self.RemoveRemain(itemset,delta)
 				
 				pass
 		return
@@ -253,7 +247,7 @@ class FPUTT:
 		pass
 
 
-def readDB(database):
+def readDBfile(database):
 	db = []
 	def convert(x):
 		x = list(x)
@@ -270,12 +264,57 @@ def readDBretail(database):
 		for line in f.readlines():
 			record = [[x,1] for x in line.split()]
 			yield record
-db = readDB("database")
-for t in db:
-	print t
 
+def readDBrealData(database,product_price,n=-1):
+	uti_price = Counter()
+	with open(product_price,"r") as f_price:
+		for line in f_price.readlines():
+			k,v = line.split()
+			uti_price[k] = float(v)
+
+
+	def pairwise(iterable):
+		"s -> (s0, s1), (s2, s3), (s4, s5), ..."
+		a = iter(iterable)
+		return izip(a, a)
+	def convert(x):
+		x = list(x)
+		x[1] = int(x[1])
+		return x
+	db = []
+	with open(database,"r") as f_item:
+		for line in f_item.readlines()[3:]:
+			content = line.split()
+			content = zip(content[0::2], content[1::2])
+			db.append([convert(x) for x in content])
+	return db,uti_price
+	pass
+def sum_uti():
+	return sum([sum([UTILITY[ten]*soluong for ten,soluong in itemset]) for itemset in db])
+def readSIS(SIS_file):
+	SIS = []
+	with open(SIS_file,"r") as f:
+		for line in f.readlines()[1:]:
+			pattern,util = line.split(",")
+			pattern = pattern.split()
+			if (len(pattern) >= 2):
+				SIS.append(pattern)
+	return SIS
+############################################################################################
+####FILE-SAMPLE####
 SIS = [["B","D"],["C","D"],["A","C","D"]]
 UTILITY = Counter({"A":5,"B":3,"C":1,"D":6,"E":2})
+min_utility = 102
+db = readDBfile("database")
+#retail = readDBretail("retail.dat")
+
+####REAL-DATA####
+
+#db,UTILITY = readDBrealData("utility_mine/RealData/real_data_aa","utility_mine/RealData/product_price")
+#min_utility = 0.002*sum_uti()
+#SIS = readSIS("realtime_sensitive_itemset_output.csv")
+#print SIS
+
 FPUTT = FPUTT()
-FPUTT.run(SIS,db,102)
+FPUTT.run(SIS,db,min_utility)
 
